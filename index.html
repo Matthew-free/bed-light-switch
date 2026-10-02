@@ -1,19 +1,48 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>스마트 스위치 탐색기</title>
-<style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#17324d;background:#eef5fb}*{box-sizing:border-box}body{margin:0;padding:24px}.wrap{max-width:760px;margin:auto}.card{background:#fff;border-radius:20px;padding:24px;margin:16px 0;box-shadow:0 10px 30px #17324d18}h1{margin:0 0 8px;font-size:29px}h2{margin:0 0 12px;font-size:20px}.muted{color:#61778c}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}button,select{border:0;border-radius:11px;padding:12px 16px;font-size:15px}button{color:#fff;background:#1b5d8f;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}select{background:#e8f0f7;color:#17324d;min-width:180px}.scan{border:2px dashed #9eb8ce;border-radius:16px;padding:22px;text-align:center}.room{border:1px solid #d3e0eb;border-radius:14px;padding:15px;margin-top:12px}.switch{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #edf2f6}.switch:first-of-type{border-top:0}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#32a852;margin-right:7px}.off .dot{background:#9aa9b5}.status{margin-top:14px;padding:12px;border-radius:10px;background:#f0f6fa}
-</style></head><body><main class="wrap">
-<section class="card"><h1>스마트 스위치 탐색기</h1><p class="muted">방을 탐색하고, 원하는 스위치를 가상 제어 기계에 보내는 연결형 시제품</p></section>
-<section class="card"><h2>1. 방 탐색</h2><div class="scan"><p id="scanText">아직 탐색하지 않았어요.</p><button id="scanBtn">방 탐색 시작</button></div><div id="rooms"></div></section>
-<section class="card"><h2>2. 제어할 스위치 선택</h2><div class="row"><select id="roomSelect" disabled><option>먼저 방을 탐색하세요</option></select><select id="switchSelect" disabled><option>스위치를 선택하세요</option></select><button id="sendBtn" disabled>기계에 끄기 명령 보내기</button></div><div class="status" id="status">대기 중</div></section>
-<section class="card"><h2>3. 기계 통신 상태</h2><p class="muted">현재는 하드웨어가 없어 가상 기계가 명령을 대신 실행합니다.</p><p><span class="dot"></span>가상 제어 기계 연결됨</p><p class="muted">나중에는 이 부분을 ESP32·서보모터·카메라 통신으로 교체할 수 있어요.</p></section>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f7fb">
+  <title>불 좀 꺼주세요</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172b42;background:#f3f7fb;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;padding:26px 16px 40px}.app{max-width:760px;margin:auto}
+    header{padding:10px 2px 24px}header .eyebrow{color:#28689d;font-size:13px;font-weight:800;letter-spacing:.07em}h1{font-size:clamp(28px,6vw,42px);letter-spacing:-.04em;margin:8px 0}header p{margin:0;color:#60748a}
+    .card{background:#fff;border:1px solid #dce6ef;border-radius:20px;padding:22px;margin:14px 0;box-shadow:0 8px 26px #2449690a}h2{font-size:18px;margin:0 0 14px;letter-spacing:-.02em}
+    .demo{display:flex;align-items:flex-start;gap:10px;background:#fff5dc;border:1px solid #f1d38b;color:#72500e;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.5}.demo b{white-space:nowrap}
+    .entry{display:flex;gap:10px;margin-top:14px}.entry input{flex:1;min-width:0;border:1px solid #cbd9e6;border-radius:13px;padding:15px 16px;font-size:16px;color:#172b42;outline:none}.entry input:focus{border-color:#28689d;box-shadow:0 0 0 3px #28689d20}button{border:0;border-radius:12px;padding:0 18px;background:#1d5f92;color:white;font-size:15px;font-weight:750;cursor:pointer}button:hover{background:#164b75}button:disabled{opacity:.5;cursor:wait}
+    .examples{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;color:#718399;font-size:12px}.chip{border:1px solid #dce6ef;border-radius:999px;background:white;color:#456078;padding:7px 10px;font-size:12px;cursor:pointer}
+    .result{display:none;margin-top:18px;padding:16px;border-radius:14px;background:#edf5fb;border:1px solid #d4e5f3}.result.show{display:block}.result strong{font-size:16px}.result p{margin:7px 0;color:#5e7388;font-size:14px;line-height:1.55}.actions{display:flex;gap:9px;margin-top:12px}.actions button{min-height:42px}.secondary{background:#e8f0f7;color:#244866}.secondary:hover{background:#dce9f3;color:#183a57}
+    .rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px}.room{border:1px solid #dce6ef;border-radius:14px;padding:15px}.room h3{font-size:15px;margin:0 0 10px}.device{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid #edf1f5;font-size:13px}.device:first-of-type{border-top:0}.state{color:#25824b;font-weight:700}.state.off{color:#75869a}.history{margin:0;padding:0;list-style:none}.history li{padding:11px 0;border-top:1px solid #edf1f5;color:#51677c;font-size:13px;line-height:1.5}.history li:first-child{border-top:0}.empty{color:#8a9aac;font-size:13px}.foot{font-size:12px;color:#8090a0;text-align:center;padding:8px}
+    @media(max-width:520px){body{padding:18px 12px}.card{padding:18px}.entry{flex-direction:column}.entry button{min-height:48px}.actions{flex-direction:column}.actions button{min-height:44px}}
+  </style>
+</head>
+<body><main class="app">
+  <header><div class="eyebrow">스마트홈 음성·문장 제어 시제품</div><h1>불 좀 꺼주세요</h1><p>방과 조명을 말하면, 연결된 기기에 보낼 명령을 준비해요.</p></header>
+  <div class="demo"><b>데모 모드</b><span>지금은 실제 스마트홈 기기가 연결되지 않았어요. 아래 방과 조명은 예시 기기이며, 실행해도 화면 속 상태만 바뀝니다.</span></div>
+  <section class="card" aria-labelledby="ask-title"><h2 id="ask-title">어느 방 불을 끌까요?</h2>
+    <form class="entry" id="commandForm"><input id="command" autocomplete="off" placeholder="예: 거실 불 좀 꺼주세요" aria-label="조명 제어 요청"><button id="parseButton" type="submit">요청 확인</button></form>
+    <div class="examples"><span>예시:</span><button class="chip" type="button">거실 불 좀 꺼주세요</button><button class="chip" type="button">침실 스탠드 꺼줘</button><button class="chip" type="button">주방 조명 켜줘</button></div>
+    <div class="result" id="result" aria-live="polite"></div>
+  </section>
+  <section class="card"><h2>등록된 방과 조명 <span style="font-size:12px;color:#8293a5;font-weight:500">· 데모 기기</span></h2><div class="rooms" id="rooms"></div></section>
+  <section class="card"><h2>기기 명령 기록</h2><ul class="history" id="history"><li class="empty">아직 보낸 명령이 없어요.</li></ul></section>
+  <p class="foot">실제 사용 시에는 Google Home, Apple Home, Matter 또는 Home Assistant 등과 기기 연결이 필요해요.</p>
+</main>
 <script>
-const discovered=[{room:'침실',switches:['침실 천장등','침대 옆 스탠드']},{room:'거실',switches:['거실 천장등','소파 옆 조명']},{room:'주방',switches:['주방 조명']}];const $=s=>document.querySelector(s);
-function renderRooms(){$('#rooms').innerHTML=discovered.map(r=>`<div class="room"><b>${r.room}</b>${r.switches.map((s,i)=>`<div class="switch" id="row-${r.room}-${i}"><span><span class="dot"></span>${s}</span><span class="muted">켜짐</span></div>`).join('')}</div>`).join('')}
-function loadSwitches(){const r=discovered.find(x=>x.room===$('#roomSelect').value);$('#switchSelect').innerHTML=r.switches.map((s,i)=>`<option value="${i}">${s}</option>`).join('');$('#switchSelect').disabled=false;$('#sendBtn').disabled=false}
-$('#scanBtn').onclick=()=>{$('#scanBtn').disabled=true;$('#scanText').textContent='카메라로 방과 스위치 위치를 분석하는 중...';setTimeout(()=>{renderRooms();$('#scanText').textContent='탐색 완료: 3개 방, 5개 스위치를 찾았어요.';$('#roomSelect').innerHTML=discovered.map(r=>`<option>${r.room}</option>`).join('');$('#roomSelect').disabled=false;loadSwitches();$('#scanBtn').disabled=false},900)};$('#roomSelect').onchange=loadSwitches;
-$('#sendBtn').onclick=()=>{const room=$('#roomSelect').value,idx=Number($('#switchSelect').value),name=$('#switchSelect').selectedOptions[0].textContent;$('#sendBtn').disabled=true;$('#status').textContent=`${room}의 ${name}을(를) 제어 기계로 보내는 중...`;setTimeout(()=>{const row=$(`#row-${room}-${idx}`);row.classList.add('off');row.querySelector('.dot').style.background='#9aa9b5';row.querySelector('.muted').textContent='꺼짐';$('#status').textContent=`실행 완료: ${room} · ${name} 스위치를 껐어요.`;$('#sendBtn').disabled=false},700)};
-</script></main></body></html>
+  const devices=[
+    {room:'거실',name:'천장등',on:true},{room:'거실',name:'소파 옆 조명',on:true},
+    {room:'침실',name:'천장등',on:true},{room:'침실',name:'스탠드',on:true},
+    {room:'주방',name:'천장 조명',on:true}
+  ];
+  const $=s=>document.querySelector(s);let pending=null;const historyItems=[];
+  function renderDevices(){const rooms=[...new Set(devices.map(d=>d.room))];$('#rooms').innerHTML=rooms.map(room=>`<div class="room"><h3>${room}</h3>${devices.filter(d=>d.room===room).map(d=>`<div class="device"><span>${d.name}</span><span class="state ${d.on?'':'off'}">${d.on?'켜짐':'꺼짐'}</span></div>`).join('')}</div>`).join('')}
+  function renderHistory(){const ul=$('#history');ul.innerHTML=historyItems.length?historyItems.map(x=>`<li>${x.time} · ${x.text}<br><b>${x.result}</b></li>`).join(''):'<li class="empty">아직 보낸 명령이 없어요.</li>'}
+  function parse(text){const room=devices.map(d=>d.room).find(r=>text.includes(r));if(!room)return {error:'방 이름을 찾지 못했어요. 거실, 침실, 주방 중 하나를 말해 주세요.'};const matched=devices.filter(d=>d.room===room);let target=matched.find(d=>text.includes(d.name));if(!target&&/(스탠드|침대|침실)/.test(text)&&room==='침실')target=matched.find(d=>d.name==='스탠드');if(!target&&/(소파|옆)/.test(text)&&room==='거실')target=matched.find(d=>d.name==='소파 옆 조명');if(!target)target=matched.find(d=>d.name==='천장등'||d.name==='천장 조명');const action=/(켜|밝혀)/.test(text)?'켜기':'끄기';return {room,device:target,action}}
+  function prepare(text){const result=$('#result');const parsed=parse(text.trim());result.classList.add('show');if(parsed.error){pending=null;result.innerHTML=`<strong>요청을 이해하지 못했어요</strong><p>${parsed.error}</p>`;return}pending=parsed;const verb=parsed.action==='끄기'?'끌까요?':'켤까요?';result.innerHTML=`<strong>${parsed.room} · ${parsed.device.name}</strong><p>“${parsed.room} ${parsed.device.name} ${parsed.action}” 요청으로 이해했어요. 이 데모 기기에 명령을 보낼까요?</p><div class="actions"><button id="confirm">${verb}</button><button class="secondary" id="cancel">취소</button></div>`;$('#confirm').onclick=execute;$('#cancel').onclick=()=>{pending=null;result.classList.remove('show')}}
+  function execute(){if(!pending)return;const {room,device,action}=pending;const text=`${room} ${device.name} ${action}`;const idx=devices.indexOf(device);devices[idx].on=action==='켜기';const now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});historyItems.unshift({time:now,text,result:`데모 기기에서 ${action} 완료`});renderDevices();renderHistory();$('#result').innerHTML=`<strong>명령을 실행했어요</strong><p>${room} ${device.name} ${action} 완료. 현재 상태는 <b>${devices[idx].on?'켜짐':'꺼짐'}</b>입니다.</p><p class="muted">데모 화면에서만 바뀐 상태예요. 실제 조명은 제어하지 않았어요.</p>`;pending=null}
+  $('#commandForm').addEventListener('submit',e=>{e.preventDefault();prepare($('#command').value)});
+  document.querySelectorAll('.chip').forEach(button=>button.addEventListener('click',()=>{$('#command').value=button.textContent;prepare(button.textContent)}));
+  renderDevices();
+</script></body></html>
